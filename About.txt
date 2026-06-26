@@ -1,0 +1,41 @@
+Distributed Download Manager (DDM)
+
+This project is a Java-based Distributed Download Manager designed to accelerate large file downloads by splitting files into multiple chunks and downloading those chunks across several peer devices on the same network. Instead of relying on a single machine to download the complete file, multiple peers collaboratively share the workload, improving download efficiency and utilizing available network resources more effectively.
+
+The application entry point is located in APP/MainApp.java. When executed, it starts a local peer server, prompts the user for a download URL, and initializes the client-side download process. The main client logic is implemented in APP/downloader.java. The client first connects to the tracker server to discover active peers on the network. Based on the availability of peers, it decides whether to perform a distributed download or fall back to a local multithreaded download.
+
+If peers are available, the client creates a dispatcher object from APP/Dispatch.java. The dispatcher is responsible for dividing the file into chunks and assigning those chunks to different peer machines. Each peer downloads its assigned byte range and transfers the data back to the initiating machine. If no peers are available, the system automatically switches to local downloading using multiple threads on the same device.
+
+The tracker component is implemented in TRACKER/server.java. The tracker does not participate in file downloading directly. Its primary responsibility is to maintain a registry of active peers, handle peer registration requests, respond to peer discovery queries, and remove inactive peers when they disconnect. Conceptually, the tracker acts as a lightweight directory service for the distributed network.
+
+The transfer mechanism is implemented using socket communication and HTTP byte-range requests. Each chunk request contains:
+
+The original file URL
+Starting byte offset
+Chunk size
+
+When a peer receives a chunk request, it opens the remote file using an HTTP range request, reads only the assigned portion of the file, and streams the bytes back to the requesting client. On the receiving side, the client writes incoming data into a shared output file using RandomAccessFile and the seek() method. This approach allows multiple peers or threads to write directly into different positions of the same file simultaneously without requiring manual merging afterward.
+
+The interfaces located in:
+
+APP/INTF/Client.java
+APP/INTF/Dispatcher.java
+
+define the high-level system behavior such as downloading, peer checking, status management, and chunk distribution. These interfaces help keep the architecture modular and easier to maintain.
+
+Workflow
+
+The overall execution flow of the system is as follows:
+
+The tracker server starts and waits for peer registrations.
+Each machine launches its own peer server.
+A client enters a direct downloadable file URL.
+The client queries the tracker for active peers.
+The file is divided into multiple chunks.
+Chunks are downloaded in parallel from peers or locally.
+All downloaded chunks are written directly into a single output file on the initiating machine.
+Limitations
+
+This system works best in a local network environment where peer devices are reachable and stable. The download process also depends on direct downloadable file URLs that support HTTP range requests. Temporary, restricted, or dynamically generated URLs may cause download failures or produce invalid output files.
+
+Additionally, the final reconstructed file is stored only on the machine that initiated the download. The system does not automatically synchronize or merge files across all participating peer devices.

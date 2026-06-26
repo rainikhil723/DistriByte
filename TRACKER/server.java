@@ -86,6 +86,7 @@ class Handler implements Runnable{
 		try {
 
 		while(!s.isInputShutdown()) {
+			
 			System.out.println("In thread");
 			String request = is.readLine();
 			/*

@@ -61,14 +61,16 @@ class PeerHandler implements Runnable {
 			/*Setting desired location*/
 			uc.setRequestProperty("Range","bytes=" + offset + "-");
 			/*Starting download*/
-			InputStream dis = uc.getInputStream();
+			InputStream dis = uc.getInputStream(); //fetch data from internet
 			byte buff[] = new byte[buffSize];
 
 			int left = size,rd = 0;
 			do {
+				// process keep contunuing untill left becomes 0 or no more data to read
 				if(left <= buffSize) {
 					//System.out.println("Downloading " + left +" bytes in 1st");
 					rd = dis.read(buff,0,left);
+					//internet pipe connection to bucket transfer
 				}
 				else {
 					//System.out.println("Downloading " + buffSize+ " bytes in 2nd");
@@ -76,8 +78,10 @@ class PeerHandler implements Runnable {
 				}
 				if(rd != -1) {
 					//System.out.println("Downloaded " + rd + " bytes");
+					//transferring data from bucket to local peer
 					os.write(buff,0,rd);
 					os.flush();
+					//flush important  so data no byte left in bucket
 					totalRead += rd;
 					left -= rd;
 				}
@@ -154,3 +158,87 @@ class Server implements Runnable{
 		}			
 	}
 }
+
+/*
+ 			Internet Connection
+                     │
+                     ▼
+           DataInputStream (dis)
+                     │
+                     ▼
+           read(buffer,1000 Bytes)
+                     │
+             (Stored in RAM only)
+                     │
+                     ▼
+           OutputStream (os)
+                     │
+                     ▼
+             Friend receives data
+
+
+The data never gets permanently stored on the Peer Server's hard disk.
+
+Instead,
+
+	Internet
+     	│
+     	▼
+	RAM Buffer (1000 Bytes)
+     	│
+     	▼
+	  Friend
+
+The RAM acts only as a temporary transfer area.		
+
+Time →
+
+Origin Server
+████████████████████████████████████
+
+Peer Buffer
+████
+    ████
+        ████
+            ████
+                ████
+
+Friend Peer
+████
+    ████
+        ████
+            ████
+                ████
+				
+				
+				
+				
+		   INTERNET
+               │
+               ▼
+      +----------------+
+      | Origin Server  |
+      +----------------+
+               │
+      HTTP Chunk Request
+               │
+               ▼
+      +----------------+
+      |  Peer Server   |
+      |----------------|
+      | Input Stream   |
+      |     │          |
+      |     ▼          |
+      | 1000B Buffer   |
+      |     │          |
+      |     ▼          |
+      | Output Stream  |
+      +----------------+
+               │
+      TCP Streaming
+               │
+               ▼
+      +----------------+
+      | Friend Peer    |
+      +----------------+
+	  */
